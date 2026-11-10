@@ -9,25 +9,41 @@ const client = new Client({
   ]
 });
 
-// Serwer dla Rendera żeby nie usypiał
 http.createServer((req, res) => res.end('Bot dziala!')).listen(10000);
+
+client.on('ready', () => {
+  console.log(`ZALOGOWANO JAKO ${client.user.tag}`);
+});
 
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
-  console.log(`Wiadomosc od ${message.author.tag}: ${message.content} | zalaczniki: ${message.attachments.size}`);
-
+  
+  console.log(`--- Nowa wiadomosc od ${message.author.tag}: ${message.content}`);
+  
+  // Sprawdzamy wszystko co moze byc gifem
+  let isGif = false;
   const content = message.content.toLowerCase();
-  const hasGif = content.includes('.gif') || content.includes('tenor.com') || content.includes('giphy.com') || content.includes('cdn.discordapp.com/attachments') && content.includes('.gif');
 
-  if (hasGif) {
-    console.log('-> WYKRYTO GIFA, USUWAM!');
-    console.log(`-> Deletable: ${message.deletable} Admin: ${message.guild.members.me.permissions.has('Administrator')}`);
+  if (content.includes('.gif') || content.includes('tenor.com') || content.includes('giphy.com')) {
+    isGif = true;
+  }
+  // Zalaczniki np. gdy ktos wysle plik .gif z kompa
+  if (message.attachments.size > 0) {
+    message.attachments.forEach(att => {
+      if (att.name.toLowerCase().endsWith('.gif') || att.contentType?.includes('gif')) {
+        isGif = true;
+      }
+    });
+  }
+
+  if (isGif) {
+    console.log('>>> WYKRYTO GIFA, PROBUJE USUNAC!');
     try {
       await message.delete();
-      console.log('-> SUKCES!');
+      console.log('>>> SUKCES - USUNIETO!');
     } catch (err) {
-      console.error(`-> BŁĄD: ${err.message} KOD: ${err.code}`);
-      console.error(err);
+      console.error(`>>> BŁĄD USUWANIA: ${err.message} KOD: ${err.code}`);
+      console.log(`>>> Czy mam permisje? Deletable: ${message.deletable}`);
     }
   }
 });
