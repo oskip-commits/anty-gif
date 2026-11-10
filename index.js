@@ -11,39 +11,34 @@ const client = new Client({
 
 http.createServer((req, res) => res.end('Bot dziala!')).listen(10000);
 
-client.on('ready', () => {
-  console.log(`ZALOGOWANO JAKO ${client.user.tag}`);
-});
+client.on('ready', () => console.log(`ZALOGOWANO JAKO ${client.user.tag}`));
 
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
-  
-  console.log(`--- Nowa wiadomosc od ${message.author.tag}: ${message.content}`);
-  
-  // Sprawdzamy wszystko co moze byc gifem
-  let isGif = false;
-  const content = message.content.toLowerCase();
+  // Tylko na kanale #pisanko
+  if (message.channel.name !== 'pisanko') return;
 
-  if (content.includes('.gif') || content.includes('tenor.com') || content.includes('giphy.com')) {
-    isGif = true;
+  let isImage = false;
+
+  // 1. Zalaczniki - jpg, png, gif, webp
+  if (message.attachments.size > 0) isImage = true;
+  
+  // 2. Linki do obrazkow / gifow
+  const c = message.content.toLowerCase();
+  if (c.includes('http') && (c.includes('.gif') || c.includes('.jpg') || c.includes('.png') || c.includes('tenor.com') || c.includes('giphy.com') || c.includes('cdn.discordapp.com'))) {
+    isImage = true;
   }
-  // Zalaczniki np. gdy ktos wysle plik .gif z kompa
-  if (message.attachments.size > 0) {
-    message.attachments.forEach(att => {
-      if (att.name.toLowerCase().endsWith('.gif') || att.contentType?.includes('gif')) {
-        isGif = true;
-      }
-    });
+  // 3. Embedy (jak ktos wkleja link a Discord robi podglad)
+  if (message.embeds.length > 0) {
+     message.embeds.forEach(e => { if (e.image || e.thumbnail) isImage = true; });
   }
 
-  if (isGif) {
-    console.log('>>> WYKRYTO GIFA, PROBUJE USUNAC!');
+  if (isImage) {
+    console.log(`USUWAM MEM OD ${message.author.tag}`);
     try {
       await message.delete();
-      console.log('>>> SUKCES - USUNIETO!');
     } catch (err) {
-      console.error(`>>> BŁĄD USUWANIA: ${err.message} KOD: ${err.code}`);
-      console.log(`>>> Czy mam permisje? Deletable: ${message.deletable}`);
+      console.error(`BLAD: ${err.message}`);
     }
   }
 });
